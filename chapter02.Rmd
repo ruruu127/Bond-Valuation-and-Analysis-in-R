@@ -1,0 +1,306 @@
+---
+title: "Bond Valuation and Analysis in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/30/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/bond-valuation-and-analysis-in-r)
+
+# Chapter 2: Yield to Maturity
+Estimating Yield To Maturity - The YTM measures the expected return to bond investors if they hold the bond until maturity. This number summarizes the compensation investors demand for the risk they are bearing by investing in a particular bond. We will discuss how one can estimate YTM of a bond.
+
+## Price-yield relationship
+
+<video width="720" controls>
+	<source src="video/video2_01.mp4" type="video/mp4">
+</video>
+
+## Credit ratings
+What is the lowest investment grade rating under the S&P scale?
+
+**Possible Answers:**
+
+* AAA (Not exactly. On the contrary, AAA is the highest rating issued by S&P.)
+* A (Not quite! An A rating from S&P isn't the highest rating, but it isn't the lowest rating within the investment grade category.)
+* **BBB**
+* B (Not exactly. The B rating from S&P is below investment grade.)
+
+Exactly! The BBB rating from S&P is the lowest rating within the investment grade category. Below investment grade, S&P also has a handful of high yield ratings.
+
+## The yield on the Moody's Baa index
+
+### Exercise
+In the previous chapter, you valued a bond with a $100 par value, 5% coupon rate, and 5 years to maturity. You then assumed a yield to maturity of 6% for that bond. Recall from the video that a bond's yield can be estimated by looking at the yield of comparable bonds.
+
+In this exercise, you'll assume that the bond you valued has a Baa credit rating by Moody's and the bond will be issued on September 30, 2016. With this information, you can use the [Quandl()](https://www.rdocumentation.org/packages/Quandl) package in R to obtain the yield of the Moody's Baa index (use the ticker `"FED/RIMLPBAAR_N_M"`") on September 30, 2016.
+
+### Instructions
+
+* Use `library()` to load the `Quandl` package.
+* Use the [Quandl()](https://www.rdocumentation.org/packages/Quandl/topics/Quandl) command from the `Quandl` package to obtain data on Moody's Baa index (`"FED/RIMLPBAAR_N_M"`). Save this data to `baa`.
+* Identify the yield for `baa` on September 30, 2016 using the `subset()` command. Save this to `baa_yield`.
+* Convert `baa_yield` from percentage to decimals using basic mathematical operations. The relevant column is saved in `baa_yield$Value` and needs to be divided by 100.
+* Finally, view `baa_yield`.
+
+```{r echo=TRUE}
+# Load Quandl package
+library(Quandl)
+
+# Obtain Moody's Baa index data
+baa <- Quandl("FED/RIMLPBAAR_N_M")
+
+# Identify 9/30/16 yield
+baa_yield <- subset(baa, baa$Date == "2016-09-30")
+
+# Convert yield to decimals and view
+baa_yield <- baa_yield$Value / 100
+baa_yield
+```
+
+Great job! It looks like the yield on Moody's Baa index on September 30, 2016 was about 4.31%, or 0.0431. In the next exercise, you'll use this yield to determine the value of your bond.
+
+## Value the 5% bond using the Baa yield you found
+
+### Exercise
+From the prior exercise, you found that the yield on comparable bonds is 4.29%.
+
+Now that you know the yield, you can use this information to find the value of a Baa-rated bond on September 30, 2016 with a $100 par value, 5% coupon rate, and 5 years to maturity.
+
+In this exercise, you will use the `bondprc` function you created in Chapter 1 to value the bond. The object you created in the previous exercise (`baa_yield`) is available in your workspace.
+
+```{r include=FALSE}
+bondprc <- function(p, r, ttm, y){
+  cf <- c(rep(p * r, ttm - 1), p * (1 + r))
+  cf <- data.frame(cf)
+  cf$t <- as.numeric(rownames(cf))
+  cf$pv_factor <- 1 / (1 + y)^cf$t
+  cf$pv <- cf$cf * cf$pv_factor
+  sum(cf$pv)
+}
+```
+
+### Instructions
+Use `bondprc()` to value your bond. Recall from Chapter One that the `bondprc()` function you created takes four arguments: the par value (`p`), the coupon rate (`r`), the time to maturity (`ttm`), and the yield of the bond (`y`).
+
+```{r echo=TRUE}
+# Value bond
+bondprc(p = 100, r = 0.05, ttm = 5, y = 0.0429)
+```
+
+Great job! Your calculations suggest that the bond is valued at approximately $103 despite its par value being only $100.
+
+## Plotting the price/yield relationship
+
+### Exercise
+Although there is an inverse relationship between price and yield, this relationship is not linear. This means that changes in price due to change in yield could differ substantially depending on whether the yield goes up or down. We will revisit this important concept when we discuss the concept of convexity in Chapter Three and how an adjustment is necessary to account for this curved relationship between a bond's price and yield. For now, just keep in mind that this inverse relationship is non-linear.
+
+In this exercise, you will assume that you have a bond with $100 par value, 10% coupon rate, and 20 years to maturity. Note that this is different from the bond you've been working with to this point! Your goal is to value this bond at different levels of yield using your `bondprc()` function, which is available in your workspace.
+
+### Instructions
+
+* Create the vector `prc_yld` from 2% (`0.02`) to 40% (`0.40`) by increments of 1% (`0.01`) by using the [seq()](https://www.rdocumentation.org/packages/base/topics/seq) function.
+* Use `data.frame()` to convert `prc_yld` to a data frame.
+* Use the pre-written `for` loop with `bondprc()` to calculate bond price at different yield levels in `prc_yld`. Try to understand the behavior of the loop.
+* Your `prc_yld` object now contains a column for yield (`prc_yld`) and a column for price (`price`). Plot this object using the pre-written code to see the relationship between price and yield to maturity (**YTM**).
+
+```{r echo=TRUE}
+# Generate prc_yld
+prc_yld <- seq(0.02, 0.40, 0.01)
+
+# Convert prc_yld to data frame
+prc_yld <- data.frame(prc_yld)
+
+# Calculate bond price given different yields
+for (i in 1:nrow(prc_yld)) {
+     prc_yld$price[i] <- bondprc(100, 0.10, 20, prc_yld$prc_yld[i])  
+}
+
+# Plot P/YTM relationship
+plot(prc_yld,
+     type = "l",
+     col = "blue",
+     main = "Price/YTM Relationship")
+```
+
+Well done! Your plot shows a clear inverse relationship betwen `price` and `prc_yld` (or yield). You'll explore the technical details of this relationship in later chapters.
+
+## Components of yield
+
+<video width="720" controls>
+	<source src="video/video2_02.mp4" type="video/mp4">
+</video>
+
+## Risk-free yield
+The bond's yield aggregates and quantifies the different risks that bond holders face when investing in that bond. Which of the following are components of the yield?
+
+**Possible Answers:**
+
+* Spread (Close, but that's not the whole story. The spread is one component of the yield.)
+* Risk-free rate (Not quite! The risk-free-rate is one component of the yield, but investors are also rewarded for taking on risk.)
+* **All of the above**
+* None of the above (Not quite. Take a closer look at the options. How are investors compensated in terms of the rate and the risk?)
+
+Exactly! The yield is comprised of the risk-free rate as well as the spread, which is designed to compensate investors for taking on risk.
+
+## Plotting US Treasury yields
+
+### Exercise
+Since corporate bonds are riskier than US Treasuries, the risk-free rate is the baseline rate we would expect corporate bonds to yield. However, US Treasury yields are not constant and could change substantially through time. We can see this by plotting the US Treasury yield data over a long period.
+
+In this exercise, you will use the [quantmod()](https://www.rdocumentation.org/packages/quantmod) package to obtain and plot 10-Year US Treasury yield data from the Federal Reserve Electronic Database (FRED) from January 2006 to September 2016.
+
+The [getSymbols()](https://www.rdocumentation.org/packages/quantmod/topics/getSymbols) command in `quantmod` allows you to access the `FRED` database by specifying the `Symbols` argument (in this case, to `"DGS10"` for 10-Year US Treasury Bonds). You'll also need to set the `src` argument equal to `"FRED"`, and set `auto.assign` to `FALSE`.
+
+### Instructions
+
+* Load the `quantmod` package.
+* Use `getSymbols()` from `quantmod` to obtain data on `DGS10` from `FRED`. Be sure to set the `auto.assign` argument to `FALSE`. Save this data to `t10yr`.
+* Subset your `t10yr` data to the period from January 2006 to September 2016 using the `data["date1/date2"]` format.
+* Use the pre-written code to plot your `t10yr` data.
+
+```{r echo=TRUE}
+# Load quantmod package
+library(quantmod)
+
+# Obtain Treasury yield data
+t10yr <- getSymbols(Symbols = "DGS10", src = "FRED", auto.assign = FALSE)
+
+# Subset data
+t10yr <- t10yr["2006-01/2016-09"]
+
+# Plot yields
+plot(x = index(t10yr),
+     y = t10yr$DGS10,
+     xlab = "Date",
+     ylab = "Yield (%)",
+     type = "l",
+     col = "red",
+     main = "10-Year US Treasury Yields")
+
+```
+
+Great work! Along with `Quandl`, the `quantmod` package is a quick and easy way to access financial data.
+
+## Plotting the investment grade spread
+
+### Exercise
+Aside from the risk-free rate changing through time, another determinant of the corporate bond yield is the size of the credit spread, which also changes through time. One way to observe this spread is to compare the yield on the highest rated investment grade bonds (Aaa rating) and the yield on the lowest investment grade bonds (Baa rating).
+
+The investment grade (IG) spread can be viewed as the market's perception of how risky investing in bonds is at a certain point in time. The larger the IG spread, the more compensation investors demand for investing in riskier bonds.
+
+In this exercise, you will plot the investment grade (IG) spread from January 2006 to September 2016. The object `spread` contains the Aaa and Baa yields (generated using the `Quandl` package).
+
+```{r include=FALSE}
+aaa <- Quandl("FED/RIMLPAAAR_N_M")
+
+library(tidyr)
+library(dplyr)
+aaa <- aaa %>% 
+  filter(Date >= "2006-01-01")
+baa <- baa %>% 
+  filter(Date >= "2006-01-01")
+
+spread <- merge(aaa, baa, by="Date")
+colnames(spread) <- c("date", "aaa", "baa")
+```
+
+### Instructions
+
+* Examine the first and last six elements of `spread` using calls to `head()` and `tail()`.
+* Generate a `diff` column within `spread` that is equal to the difference between Baa yields (`baa`) and Aaa yield (`aaa`), converted to percentage points (`* 100`).
+* Use `plot()` to view spread over time. Set the `x` argument equal to `spread$date` and set the `y` argument equal to `spread$diff`.
+
+```{r echo=TRUE}
+# Examine first and last six elements in spread
+head(spread)
+tail(spread)
+
+# Calculate spread$diff
+spread$diff <- (spread$baa - spread$aaa) * 100
+
+# Plot spread
+plot(x = spread$date,
+     y = spread$diff,
+     type = "l",
+     xlab = "Date",
+     ylab = "Spread (bps)",
+     col = "red",
+     main = "Baa - Aaa Spread")
+```
+
+Well done! As you can see, the Aaa-Baa spread varies considerably over time, and was especially high during the global finacial crisis in the late-2000s.
+
+## Estimating the yield of a bond
+
+<video width="720" controls>
+	<source src="video/video2_03.mp4" type="video/mp4">
+</video>
+
+## Finding a bond's yield
+
+### Exercise
+Suppose someone is offering $95.79 to purchase a bond you own with a $100 par value, 5% coupon rate, and 5 years to maturity. In this situation, you would like to know what the yield is of that bond, so you can compare the yield to the yield of other comparable securities to know whether the price being offered is too high or too low.
+
+One way to find the yield is by trial-and-error. You first start with an initial guess, say 5% and find the price given a 5% yield. If the resulting price is too high, you know due to the inverse relationship between price and yield that your next guess has to be a *higher* yield.
+
+Suppose your next guess is a yield of 7%. That will result in a price that is too low, which means that the yield is higher than 5% but lower than 7%. So, you now pick a yield of 6%, which will give you the correct answer.
+
+In this exercise, you will calculate the price using a 5%, 6%, and 7% yield using your `bondprc()` function, which is preloaded in the workspace. Remember that the goal is to reverse engineer bond characteristics valued at $95.79.
+
+### Instructions
+
+* Use `bondprc()` to calculate the value of the bond using a **5% yield**. Remember that the bond has a $100 par value, a 5% coupon rate, and 5 years to maturity.
+* Use another call to `bondprc()` to calculate the value of the bond using a **7% yield**.
+* Use a final call to `bondprc()` to calculate the value of the bond using a **6% yield**.
+
+```{r echo=TRUE}
+# Value bond using 5% yield
+bondprc(p = 100, r = 0.05, ttm = 5, y = 0.05)
+
+# Value bond using 7% yield
+bondprc(p = 100, r = 0.05, ttm = 5, y = 0.07)
+
+# Value bond using 6% yield
+bondprc(p = 100, r = 0.05, ttm = 5, y = 0.06)
+```
+
+Exellent! By guessing upper and lower bounds, you were able to triangulate the correct yield of 6%. In the next exercise, you'll make this process a bit easier by coding a new function to calculate yield for you!
+
+## Use uniroot function to find YTM
+
+### Exercise
+Trial-and-error is a very cumbersome process. An alternative is to use an algorithm that does the work for you. In this particular case, the solution to the problem is the same as finding the root of a function.
+
+In this exercise, you will use the [uniroot()](https://www.rdocumentation.org/packages/stats/topics/uniroot) function to find the root.
+
+The `uniroot()` function requires us to setup a vector of cash flows, `cf`, that begins with the price of the bond (as a negative number) as the first element and the cash flows you expect to receive from the bond (i.e., coupon and principal payments) as the remaining elements.
+
+Recall that the price of the bond is $95.79 and the bond has a $100 par value, 5% coupon rate, and 5 years to maturity.
+
+### Instructions
+
+* Create a vector of cash flows, `cf`, which includes the initial bond price (negative) and payments until maturity (positive).
+* Use the pre-written code to create a simple bond valuation function, `bval()`, which calculates the value of the bond at each time period.
+* Use the pre-written code to create the `ytm()` function using `uniroot()`.
+* Use `ytm()` with your `cf` vector to find the bond's yield to maturity.
+
+```{r echo=TRUE}
+# Create cash flow vector
+cf <- c(-95.79, 5, 5, 5, 5, 105)
+
+# Create bond valuation function
+bval <- function(i, cf,
+     t=seq(along = cf))
+     sum(cf / (1 + i)^t)
+
+# Create ytm() function using uniroot
+ytm <- function(cf) {
+    uniroot(bval, c(0, 1), cf = cf)$root
+}
+
+# Use ytm() function to find yield
+ytm(cf)
+```
+
+Excellent work! Your custom `ytm()` function produced an output of approximately 0.06, representing a 6% yield. Now that you've created the necessary functions, this estimation process will be much easier in the future.

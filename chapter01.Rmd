@@ -1,0 +1,197 @@
+---
+title: "Bond Valuation and Analysis in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/30/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/bond-valuation-and-analysis-in-r)
+
+# Chapter 1: Introduction and Plain Vanilla Bond Valuation
+The fixed income market is large and filled with complex instruments. In this course, we focus on plain vanilla bonds to build solid fundamentals you will need to tackle more complex fixed income instructions. In this chapter, we demonstrate the mechanics of valuing bonds by focusing on an annual coupon, fixed rate, fixed maturity, and option-free bond.
+
+## Introduction
+
+<video width="720" controls>
+	<source src="video/video1_01.mp4" type="video/mp4">
+</video>
+
+## Price vs. value
+In the video, we saw the difference between price and value of an asset. Which of the following is a correct statement about an asset's price?
+
+**Possible Answers:**
+
+* The price is the amount the asset is worth. (Not quite! With fixed income assets, the price may not always be equal to the asset's worth.)
+* The price is always equal to the asset's value. (Not exactly! The price is fixed and may not be the same as the asset's actual value.)
+* **The price is the amount a buyer pays to purchase the asset.**
+* None of the above. (Not exactly. Take a closer look at each option and return to the video if you are confused about the difference between price and value.)
+
+Exactly! The price is simply the amount the buyer pays to purchase the asset, but it does not necessarily determine the *value* of the asset.
+
+## Time value of money
+
+<video width="720" controls>
+	<source src="video/video1_02.mp4" type="video/mp4">
+</video>
+
+## Computing a bond's future value
+
+### Exercise
+Recall from the video that the future value of $100 will be more than $100 because you have to be compensated for the opportunity cost (e.g., interest rate) that you forego by not having that money now (and investing it!). The longer you have to forego being able to use that money, the larger your opportunity cost grows.
+
+The growth rate of the opportunity cost is compounded, which means the future value of $100 two years from now is equal to the future value of $100 one year from now growing at the opportunity cost (i.e., the opportunity cost grows at a compounded rate).
+
+In this exercise, you will calculate the future value of $100 one year from now and two years from now assuming an opportunity cost of 10%.
+
+### Instructions
+
+* Create `pv` (present value) with a value of 100.
+* Create `r` (interest rate) of 0.10.
+* Calculate the future value of $100 one year from now using `pv` and `r` with basic mathematical operations in R. Store this to `fv1`.
+* Calculate the future value of $100 two years from now using `pv` and `r` with basic mathematical operations in R. Store this to `fv2`.
+
+```{r echo=TRUE}
+# Create pv
+pv <- 100
+
+# Create r
+r <- 0.10
+
+# Calculate fv1
+fv1 <- pv * (1 + r)
+
+# Calculate fv2
+fv2 <- pv * (1 + r) ^ 2
+```
+
+Excellent work! Determining future value based on present value is a relatively simple process if you have all necessary information.
+
+## Computing a bond's present value
+
+### Exercise
+Now that you've calculated future value from present value, it should be trivial to reverse the process.
+
+Recall from the video that if you expect to receive $100 one year from now, the present value of that $100 will be *less* today (because you prefer to have the money sooner than later). Moreover, if we expect to receive $100 two years from now, the value of that will be less than the present value of $100 one year now.
+
+In this exercise, you will calculate the present value of `fv1` and `fv2` assuming an `r` (interest rate) of `0.10`, where `fv1` is a future value one year from now and `fv2` is a future value two years from now.
+
+The objects `fv1`, `fv2`, and `r`, which you generated in the previous exercise, are available in your workspace.
+
+### Instructions
+
+* Use basic mathematical operations in R to calculate the present value of `fv1`. Save this to `pv1`.
+* Repeat this process to calculate the present value of `fv2`. Save this to `pv2`.
+
+```{r echo=TRUE}
+# Calculate pv1
+pv1 <- fv1 / (1 + r)
+
+# Calculate pv2
+pv2 <- fv2 / (1 + r) ^ 2
+
+# Print pv1 and pv2
+print(pv1)
+print(pv2)
+```
+
+Great work! Calculating present value from future value (and vice-versa) is relatively trivial using basic mathematical operations in R. As you can see, you're right back where you started: $100!
+
+## Bond valuation
+
+<video width="720" controls>
+	<source src="video/video1_03.mp4" type="video/mp4">
+</video>
+
+## Laying out the bond's cash flows
+
+### Exercise
+In the next set of exercises, you'll build a cash flow data frame as seen in the previous video.
+
+Suppose you are considering investing in a bond that has a $100 par value, 5% coupon rate, and 5 years to maturity. The coupon rate is the interest that you earn from holding the bond, so prior to the bond's maturity you would receive $5 of coupon payments each year. At maturity, you will also receive the $100 par value back.
+
+In this exercise, you will create a vector `cf` that lays out this bond's cash flows. You will then convert this vector into a data frame, so you can add additional columns of data required in subsequent analyses.
+
+### Instructions
+
+* Create vector `cf` that contains the bond's cash flows. Remember that cash flows are $5 for the first 4 years and $105 in the 5th year.
+* Use `data.frame()` to convert `cf` into a data frame.
+
+```{r echo=TRUE}
+# Create vector of cash flows
+cf <- c(5, 5, 5, 5, 105)
+
+# Convert to data frame
+cf <- data.frame(cf)
+cf
+```
+
+Excellent work! This very basic `cf` object represents the first step towards a more robust bond valuation model. In the next exercise, you'll expand this data frame to include additional information.
+
+## Discounting bond cash flows with a known yield
+
+### Exercise
+After laying out the bond's cash flows, we can now go through the steps of calculating the present value of each cash flow and value the bond. Recall that the value of the bond is the sum of the present value of its cash flows.
+
+In this exercise, you will calculate the appropriate present value factor, `pv_factor`, for each cash flow, so we can calculate each cash flow's present value `pv`. You will then sum the `pv` to find the value of the bond.
+
+Recall that this bond has a yield of 6%, which acts as the discount rate. The data frame you created in the prior exercise, `cf`, is present in your workspace.
+
+### Instructions
+
+* Create a new column, `t`, in your `cf` data frame to indicate the year in which cash flow is received. Note that for your purposes, the year is equivalent to the name of the rows in your data frame (`1`, `2`, `3`, etc.). This means you can simply use `rownames()` to name `t`. Use `as.numeric()` to make sure the values of `t` are numeric.
+* Create another new column, `pv_factor` in your `cf` object to store each year's present value factor. Recall that each year's present value factor is calculated as 1 divided by 1 + the yield rate (in this case 6%, or `0.06`) set to the power of your time variable (`t`).
+* Create a `pv` column in `cf` to store the present value of each year's cash flow. The present value is calculated as cash flow (`cf`) multiplied by the year's present value factor (`pv_factor`).
+* Finally, use `sum()` to sum the values in `pv` to find the value of the bond.
+
+```{r echo=TRUE}
+# Add column t to cf
+cf$t <- as.numeric(rownames(cf))
+
+# Calculate pv_factor
+cf$pv_factor <- 1 / (1 + 0.06)^cf$t
+
+# Calculate pv
+cf$pv <- cf$cf * cf$pv_factor
+
+# Calculate the bond price
+sum(cf$pv)
+```
+
+Excellent work! Calculating bond price using data frames in R allows you to keep track of a handful of complex variables. In this case, the overall bond price should be set at about $96.
+
+## Convert your code into a function
+
+<video width="720" controls>
+	<source src="video/video1_04.mp4" type="video/mp4">
+</video>
+
+## Convert your code into a bond valuation function
+
+### Exercise
+In the prior exercises, you worked through in a step-by-step fashion how to calculate the value of a bond. However, performing all those steps repeatedly to value many bonds will be cumbersome. Fortunately, you can create a function to perform those same calculations repeatedly for different bonds.
+
+The function you create must have the flexibility to allow you to input key features of the bond. Specific to our prior example, you'll need the function to be able to incorporate a bond's par value, coupon rate, time to maturity, and yield.
+
+In this exercise, you'll create the function `bondprc` that takes these four inputs to calculate the value of a bond. Recall that to create a function you can use `function(input 1, input 2, ...) { [lines of code] }`.
+
+### Instructions
+
+* A partially built function, `bondprc`, has been generated in your workspace. Complete the function by constructing the `function()` command and providing the names of four inputs: `p` for par value, `r` for coupon rate, `ttm` for time to maturity, and `y` for yield.
+* Verify that the `bondprc` function gives us a price of $95.79 for the value of a bond with a $100 par value, 5% coupon rate, 5 years to maturity, and 6% yield to maturity.
+
+```{r echo=TRUE}
+# Create function
+bondprc <- function(p, r, ttm, y) {
+  cf <- c(rep(p * r, ttm - 1), p * (1 + r))
+  cf <- data.frame(cf)
+  cf$t <- as.numeric(rownames(cf))
+  cf$pv_factor <- 1 / (1 + y)^cf$t
+  cf$pv <- cf$cf * cf$pv_factor
+  sum(cf$pv)
+}
+
+# Verify prior result
+bondprc(100, 0.05, 5, 0.06)
+```
+
+Great work! Although it is important to walk through each step in the process to understand how to calculate bond prices, you should always attempt to create an appropriate function when faced with a complex and repetitive calculation.

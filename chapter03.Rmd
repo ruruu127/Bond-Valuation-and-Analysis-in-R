@@ -1,0 +1,234 @@
+---
+title: "Bond Valuation and Analysis in R"
+author: "Ruzaini Amiraa Roslan"
+date: "9/30/2021"
+output: html_document
+---
+
+[Link to original course](https://learn.datacamp.com/courses/bond-valuation-and-analysis-in-r)
+
+# Chapter 3: Duration and Convexity
+Interest rate risk is the biggest risk that bond investors face. When interest rates rise, bond prices fall. Because of this, much attention is paid to how sensitive a particular bond's price is to changes in interest rates. In this chapter, we start the discussion with a simple measure of bond proce volatility - the Price Value of a Basis Point. Then, we discuss duration and convexity, which are two common measures that are used to manage interest rate risk.
+
+## Bond price volatility and the price value of a basis point
+
+<video width="720" controls>
+	<source src="video/video3_01.mp4" type="video/mp4">
+</video>
+
+## Price value of a basis point
+What is another name for price value of a basis point?
+
+**Possible Answers:**
+
+* **Dollar value of an 01**
+* Duration
+* Convexity
+* None of the above
+
+That's right! You can also refer to a basis point as *an 01*, because it represents 0.01%. You'll sometimes encounter the phrase `PV01`.
+
+## Calculate PV01 of a 10% bond
+
+### Exercise
+You can calculate the PV01 by calculating the value of a bond and the value of the same bond with a one basis point change in yield. In this exercise, you will calculate the PV01 of a bond with a $100 par value, 10% coupon, and 20 years to maturity assuming 10% yield to maturity.
+
+Use the `bondprc()` function you created in Chapter One to value the two bonds. This function has been preloaded in your workspace. Make sure the result is a positive number.
+
+```{r include=FALSE}
+bondprc <- function(p, r, ttm, y){
+  cf <- c(rep(p * r, ttm - 1), p * (1 + r))
+  cf <- data.frame(cf)
+  cf$t <- as.numeric(rownames(cf))
+  cf$pv_factor <- 1 / (1 + y)^cf$t
+  cf$pv <- cf$cf * cf$pv_factor
+  sum(cf$pv)
+}
+```
+
+### Instructions
+
+* Calculate PV01 using the formula you saw in the video. Remember that PV01 is equivalent to the value of one bond minus the value of the other bond. To calculate this, you should use two calls to `bondprc()`.
+* To get the correct answer, you should subtract the bond with the YTM of 10.00% from the bond with the YTM of 10.01%.
+* Also remember to take the `abs()` of this formula to ensure your output is positive.
+
+```{r echo=TRUE}
+# Calculate the PV01
+abs(bondprc(p = 100, r = 0.10, ttm = 20, y = 0.1001) - bondprc(p = 100, r = 0.10, ttm = 20, y = 0.1000))
+```
+
+Well done! You have now calculated the present value of a basis point for this bond.
+
+## Duration
+
+<video width="720" controls>
+	<source src="video/video3_02.mp4" type="video/mp4">
+</video>
+
+## Duration of a zero-coupon bond
+Duration can sometimes be thought of as the weighted-average time to maturity of the bond. Because of interim cash flows, the duration of a coupon bond is less than its time to maturity. Based on that reasoning, what is the duration of a zero-coupon bond with three years to maturity?
+
+**Possible Answers:**
+
+* Zero
+* One
+* Two
+* **Three**
+
+Exactly! Without a coupon to adjust for, the duration would equal the regular maturity (in this case, three).
+
+## Calculate approximate duration for a bond
+
+### Exercise
+A Useful approximation of the duration formula is called the *approximate duration*, which is given by
+
+$$(P(down) - P(up))/(2 * P * \delta y)$$
+
+where $P$ is the price of the bond, $P(down)$ is the price of the bond if yield decreases, $P(up)$ is the price of the bond if yield increases, and $\delta y$ is the expected change in yield.
+
+The full duration formula is more complex. If you're interested, you can refer to the "Fixed Income" chapter of my book as a reference for that formula.
+
+In this exercise, you will calculate the approximate duration of a bond with $100 par value, 10% coupon rate, 20 years to maturity, 10% yield to maturity, and a 1% expected change in yield. To make this calculation, use your familiar bondprc() function, which has been preloaded in the workspace.
+
+### Instructions
+
+* Use `bondprc()` to calculate the bond price today given 10% yield. Save this to `px` and then view `px`.
+* Use another call to `bondprc()` to calculate the bond price (`pc_up`) if the yield increases by 1%.
+* Use a third call to `bondprc()` to calculate the bond price (`pc_down`) if the yield decreases by 1%.
+* Use your three objects (`px`, `px_up`, `px_down`) to calculate the approximate duration assuming a 1% change in yields.
+
+```{r echo=TRUE}
+# Calculate bond price today
+px <- bondprc(p = 100, r = 0.10, ttm = 20, y = 0.10)
+px
+
+# Calculate bond price if yields increase by 1%
+px_up <- bondprc(p = 100, r = 0.10, ttm = 20, y = 0.11)
+px_up
+
+# Calculate bond price if yields decrease by 1%
+px_down <- bondprc(p = 100, r = 0.10, ttm = 20, y = 0.09)
+px_down
+
+# Calculate approximate duration
+duration <- (px_down - px_up) / (2 * px * 0.01)
+duration
+```
+
+Great job! This formula provides a simple way to estimate duration without getting into the nitty-gritty of the full duration formula.
+
+## Estimating effect on bond price using duration
+
+### Exercise
+When we know a bond's duration, we can come up with an estimate of the bond's price assuming some expected change in yield.
+
+In this exercise, assume yields are expected to decrease by 1%, what is the estimated percentage change in price and dollar change in price due to duration. The object `px`, which denotes the price of this bond, is $100 and the bond's duration is `8.545937`. To calculate the percentage change using duration, recall the formula:
+
+$$-D * \delta y$$
+
+where $D$ is the duration and $\delta y$ is the change in yield.
+
+To calculate the dollar change using duration, recall that you multiply the percentage change by the current price. The `px` object and `duration` object generated in the previous exercise have been preloaded in your workspace.
+
+### Instructions
+
+* Estimate percentage change (`duration_pct_change`) based on `duration` if yields are expected to decrease by 1%.
+* Estimate dollar change (`duration_dollar_change`) based on `duration_pct_change` and `px` if yields are expected to decrease by 1%.
+
+```{r echo=TRUE}
+# Estimate percentage change
+duration_pct_change <- -duration * -0.01
+duration_pct_change
+
+# Estimate dollar change
+duration_dollar_change <- duration_pct_change * px
+duration_dollar_change
+```
+
+Great job! Once again, the easiest way to calculate some of these values is to use basic mathematical operations in R.
+
+## Convexity
+
+<video width="720" controls>
+	<source src="video/video3_03.mp4" type="video/mp4">
+</video>
+
+## Calculate approximate convexity for a bond
+
+### Exercise
+Recall from the video that we can improve the estimate of the bond price by adding a **convexity term** to the duration effect. The convexity term accounts for how bowed the price/YTM curve is for the bond.
+
+In this exercise, you will calculate the approximate convexity for a bond with $100 par value, 10% coupon, 20 years to maturity, and 10% yield to maturity when you expect a 1% change in yield and add that to the duration effect. Recall that the approximate convexity formula is
+
+$$(P(up) + P(down) - 2 * P) / (P * \delta y^2)$$
+
+where $P$ is the price of the bond, $P(up)$ is the price of the bond when yields increase, $P(down)$ is the price of the bond when yields decrease, and $\delta y$ is the expected change in yield.
+
+The objects `px`, `px_up`, and `px_down` from the earlier exercise are preloaded in your workspace.
+
+### Instructions
+Calculate approximate convexity by incorporating the `px`, `px_up`, and `px_down` objects into the formula listed above. You will also need to input an appropriate value for `dy`.
+
+```{r echo=TRUE}
+# Calculate approximate convexity
+convexity <- (px_up + px_down - 2 * px) / (px * (0.01)^2)
+convexity
+```
+
+Great job! As you saw in the video, measuring convexity will dramatically improve your overall estimate of bond price. You'll practice this in the next exercise.
+
+## Estimating effect of convexity on bond price
+
+### Exercise
+Now that you've calculated convexity for your bond, you can estimate the effect of convexity on the bond's price.
+
+Specifically, recall from the video that the percentage change based on convexity is given by
+
+$$0.5 * convexity * (\delta y)^2$$
+
+where $\delta y$ is the expected change in yield. The dollar change based on convexity is equal to the percentage change multiplied by the current price $P$.
+
+For this exercise, assume that yields are expected to decline by 1%.
+
+The `convexity` object, which you calculated in the previous exercise as 116.521, and the `px` object, which is the price of the bond of $100, have been preloaded in your workspace.
+
+### Instructions
+
+* Estimate percentage change (`convexity_pct_change`) based on `convexity` if yields decrease by 1%.
+* Estimate dollar change (`convexity_dollar_change`) based on `convexity` if yields decrease by 1%.
+
+```{r echo=TRUE}
+# Estimate percentage change
+convexity_pct_change <- 0.5 * convexity * (0.01)^2
+convexity_pct_change
+
+# Estimate dollar change
+convexity_dollar_change <- convexity_pct_change * px
+convexity_dollar_change
+```
+
+Excellent job! While the dollar change due to convexity in this case is relatively small, it is important to control for in your overall estimation.
+
+## Estimating the bond price using duration and convexity
+
+### Exercise
+In an earlier exercise, you calculated the dollar change due to duration of 8.5459 and convexity of 0.5826. You stored these two values in `duration_dollar_change` and `convexity_dollar_change`, respectively.
+
+Recall that the price of the bond is $100, which is stored in the object `px`. In this exercise, you will be asked to calculate the estimated change in price based on duration and convexity and calculate the estimated new price of the bond when yields decrease by 1%.
+
+Suppose you know that the bond's duration leads to a price effect of `8.5459`, which we will store in the object `duration_dollar_change`. Suppose we also know that the bond's convexity leads to a price effect of `0.5826`, which we will store in the object `convexity_dollar_change`. In this exercise, you will add the duration and convexity effects to arrive at the estimated bond price.
+
+### Instructions
+
+* Estimate change in price (`price_change`) due to duration and convexity. To do this, combine the `duration_dollar_change` with `convexity_dollar_change`.
+* Estimate `price` based on duration and convexity. This formula should have similarities to your formula for `price_change`, but should incorporate the bond's current price (`px`).
+
+```{r echo=TRUE}
+# Estimate change in price
+price_change <- duration_dollar_change + convexity_dollar_change
+
+# Estimate price
+price <- duration_dollar_change + convexity_dollar_change + px
+```
+
+Excellent work! You've now written code to calculate many of the important qualities of bond value, including advanced topics for adjusting value based on `duration` and `convexity` In the next chapter, you'll practice these skills in a final comprehensive case study.
